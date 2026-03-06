@@ -86,14 +86,9 @@ export default function Admin() {
   const [detail, setDetail] = useState(null);
   const perPage = 10;
 
-  const apiUrl = import.meta.env.VITE_API_URL;
+  const apiUrl = import.meta.env.VITE_API_URL || '';
 
   const fetchData = async () => {
-    if (!apiUrl) {
-      // Demo data
-      setData(demoData());
-      return;
-    }
     setLoading(true);
     try {
       const res = await fetch(`${apiUrl}/api/inscriptions`, {
@@ -169,19 +164,17 @@ export default function Admin() {
   }, [normalized]);
 
   const updateStatus = async (id, statut) => {
-    if (apiUrl) {
-      try {
-        await fetch(`${apiUrl}/api/inscriptions/${id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': import.meta.env.VITE_ADMIN_PASSWORD || 'admin2026',
-          },
-          body: JSON.stringify({ statut }),
-        });
-      } catch { /* ignore */ }
-    }
-    setData((prev) => prev.map((d) => (d.id === id ? { ...d, statut } : d)));
+    try {
+      await fetch(`${apiUrl}/api/inscriptions/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': import.meta.env.VITE_ADMIN_PASSWORD || 'admin2026',
+        },
+        body: JSON.stringify({ statut }),
+      });
+    } catch { /* ignore */ }
+    setData((prev) => prev.map((d) => (d.ID === id || d.id === id ? { ...d, Statut: statut, statut } : d)));
   };
 
   const exportCSV = () => {
