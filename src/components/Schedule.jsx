@@ -20,7 +20,7 @@ export default function Schedule() {
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
   return (
-    <section id="programme" className="py-24 px-6 bg-black-primary">
+    <section id="programme" className="py-24 px-6 bg-white">
       <div ref={ref} className="max-w-3xl mx-auto">
         <motion.div
           className="text-center mb-16"
@@ -39,7 +39,7 @@ export default function Schedule() {
         {/* Timeline */}
         <div className="relative">
           {/* Vertical line */}
-          <div className="absolute left-[4.5rem] sm:left-24 top-0 bottom-0 w-px bg-gray-700" />
+          <div className="absolute left-[4.5rem] sm:left-24 top-0 bottom-0 w-px bg-gray-200" />
 
           <div className="space-y-0">
             {schedule.map((item, i) => (
@@ -53,8 +53,8 @@ export default function Schedule() {
                 <span className="font-bebas text-xl sm:text-2xl text-gray-500 w-16 sm:w-20 text-right tracking-wider group-hover:text-orange-primary transition-colors">
                   {item.time}
                 </span>
-                <div className="relative z-10 w-3 h-3 bg-orange-primary rounded-full ring-4 ring-black-primary flex-shrink-0 group-hover:scale-125 transition-transform" />
-                <span className="text-sm sm:text-base text-gray-300 uppercase tracking-widest group-hover:text-white transition-colors">
+                <div className="relative z-10 w-3 h-3 bg-orange-primary rounded-full ring-4 ring-white flex-shrink-0 group-hover:scale-125 transition-transform" />
+                <span className="text-sm sm:text-base text-gray-600 uppercase tracking-widest group-hover:text-gray-900 transition-colors">
                   {item.label}
                 </span>
               </motion.div>

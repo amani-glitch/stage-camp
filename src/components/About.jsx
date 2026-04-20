@@ -14,7 +14,7 @@ export default function About() {
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
   return (
-    <section id="camp" className="py-24 px-6 bg-black-primary">
+    <section id="camp" className="py-24 px-6 bg-white">
       <div ref={ref} className="max-w-7xl mx-auto">
         <motion.div
           className="grid lg:grid-cols-5 gap-16 items-start"
@@ -31,7 +31,7 @@ export default function About() {
               L'ELITE
             </h2>
             <div className="w-16 h-0.5 bg-orange-primary mb-8" />
-            <div className="space-y-6 text-gray-300 leading-relaxed">
+            <div className="space-y-6 text-gray-600 leading-relaxed">
               <p>
                 Le CD84 affirme une ambition technique forte : structurer, harmoniser
                 et elever le niveau de jeu sur l'ensemble du territoire departemental.
@@ -53,7 +53,7 @@ export default function About() {
             {stats.map((stat, i) => (
               <motion.div
                 key={stat.label}
-                className="bg-black-secondary border border-gray-700 p-6 hover:border-orange-primary transition-all duration-300 hover:-translate-y-1"
+                className="bg-[#FAF9F7] border border-gray-200 p-6 hover:border-orange-primary transition-all duration-300 hover:-translate-y-1"
                 initial={{ opacity: 0, y: 20 }}
                 animate={inView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.6, delay: 0.2 + i * 0.1 }}

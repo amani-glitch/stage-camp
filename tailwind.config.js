@@ -4,15 +4,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        'black-primary': '#0A0A0A',
-        'black-secondary': '#141414',
-        'black-tertiary': '#1F1F1F',
-        'orange-primary': '#F97316',
-        'orange-hover': '#FB923C',
-        'orange-dark': '#EA580C',
+        'black-primary': '#0D0D0D',
+        'black-secondary': '#171717',
+        'black-tertiary': '#222222',
+        'orange-primary': '#E8792B',
+        'orange-hover': '#F0A060',
+        'orange-dark': '#D4691F',
         'gray-100': '#F5F5F5',
         'gray-300': '#D4D4D4',
-        'gray-500': '#737373',
+        'gray-500': '#736B63',
         'gray-700': '#404040',
       },
       fontFamily: {

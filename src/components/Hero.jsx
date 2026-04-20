@@ -11,14 +11,14 @@ export default function Hero() {
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20"
     >
       {/* Background overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black-primary/80 via-black-primary/70 to-black-primary z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-white/70 to-white z-10" />
 
       {/* Geometric accents */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,rgba(249,115,22,0.08),transparent_60%)]" />
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,rgba(232,121,43,0.1),transparent_60%)]" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-orange-primary/5 blur-3xl rounded-full" />
       </div>
 
@@ -42,9 +42,9 @@ export default function Hero() {
           {/* Orange accent line */}
           <div className="flex items-center justify-center gap-6 mb-2">
             <div className="hidden sm:block w-16 h-0.5 bg-orange-primary" />
-            <h1 className="font-bebas text-[clamp(4rem,12vw,10rem)] leading-[0.85] tracking-wider">
+            <h1 className="font-bebas text-[clamp(4rem,12vw,10rem)] leading-[0.85] tracking-wider text-gray-900">
               SUMMER<br />CAMP<br />
-              <span className="text-white">CD</span>
+              <span className="text-gray-900">CD</span>
               <span className="text-orange-primary">84</span>
             </h1>
             <div className="hidden sm:block w-16 h-0.5 bg-orange-primary" />
@@ -52,7 +52,7 @@ export default function Hero() {
         </motion.div>
 
         <motion.p
-          className="text-gray-300 text-sm sm:text-base uppercase tracking-[0.4em] mt-6 mb-4"
+          className="text-gray-500 text-sm sm:text-base uppercase tracking-[0.4em] mt-6 mb-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.5 }}
@@ -66,7 +66,7 @@ export default function Hero() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.7 }}
         >
-          <p className="font-bebas text-2xl sm:text-3xl tracking-wider text-white">
+          <p className="font-bebas text-2xl sm:text-3xl tracking-wider text-gray-900">
             16 &mdash; 22 AOUT 2026
           </p>
           <p className="text-gray-500 text-sm uppercase tracking-widest">
@@ -84,8 +84,8 @@ export default function Hero() {
           <div className="bg-orange-primary/10 border border-orange-primary/40 px-6 py-3 flex items-center gap-3">
             <span className="font-bebas text-4xl sm:text-5xl text-orange-primary leading-none">{remaining}</span>
             <div className="text-left">
-              <p className="text-white text-sm font-bold uppercase tracking-wider leading-tight">Places restantes</p>
-              <p className="text-gray-400 text-xs uppercase tracking-widest">sur 40</p>
+              <p className="text-gray-900 text-sm font-bold uppercase tracking-wider leading-tight">Places restantes</p>
+              <p className="text-gray-500 text-xs uppercase tracking-widest">sur 40</p>
             </div>
           </div>
         </motion.div>
@@ -98,13 +98,13 @@ export default function Hero() {
         >
           <button
             onClick={() => scrollTo('inscription')}
-            className="bg-orange-primary text-black-primary font-bold uppercase tracking-widest px-8 py-4 text-sm hover:bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_40px_rgba(249,115,22,0.3)]"
+            className="bg-orange-primary text-white font-bold uppercase tracking-widest px-8 py-4 text-sm hover:bg-orange-dark transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_40px_rgba(232,121,43,0.3)]"
           >
             S'inscrire maintenant
           </button>
           <button
             onClick={() => scrollTo('camp')}
-            className="border-2 border-orange-primary text-white font-bold uppercase tracking-widest px-8 py-4 text-sm hover:bg-orange-primary hover:text-black-primary transition-all duration-300"
+            className="border-2 border-orange-primary text-gray-900 font-bold uppercase tracking-widest px-8 py-4 text-sm hover:bg-orange-primary hover:text-white transition-all duration-300"
           >
             Decouvrir le camp
           </button>

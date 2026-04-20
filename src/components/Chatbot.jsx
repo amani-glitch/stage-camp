@@ -1,92 +1,82 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageCircle, X, Send, Loader2, Mic, Volume2, VolumeX } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Mic, MicOff } from 'lucide-react';
+import geminiLiveService from '../services/geminiLiveService';
 
-const GREETING = "Yo ! Ici COACH, l'assistant du Summer Camp CD84. T'as des questions sur le camp ? Je suis la. Let's go !";
+const GREETING = "Bonjour, je suis l'assistant de Quentin Lioret du Comite Departemental de Basketball du Vaucluse. Je suis la pour vous renseigner sur le Summer Camp CD84. Vous etes parent d'un joueur, ou joueur vous-meme ?";
 
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState('text');
   const [messages, setMessages] = useState([
     { role: 'bot', text: GREETING },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [voiceMode, setVoiceMode] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [voiceStatus, setVoiceStatus] = useState('idle');
+  const [inputVolume, setInputVolume] = useState(0);
+  const [outputVolume, setOutputVolume] = useState(0);
+  const [apiKey, setApiKey] = useState(null);
+  const [blinking, setBlinking] = useState(false);
   const messagesEnd = useRef(null);
-  const recognitionRef = useRef(null);
-  const voiceModeRef = useRef(false);
-  const loadingRef = useRef(false);
-
-  useEffect(() => { voiceModeRef.current = voiceMode; }, [voiceMode]);
-  useEffect(() => { loadingRef.current = loading; }, [loading]);
+  const messagesRef = useRef(messages);
 
   useEffect(() => {
+    if (voiceStatus !== 'active') return;
+    const scheduleBlink = () => {
+      const delay = 2000 + Math.random() * 4000;
+      return setTimeout(() => {
+        setBlinking(true);
+        setTimeout(() => setBlinking(false), 150);
+        timerId = scheduleBlink();
+      }, delay);
+    };
+    let timerId = scheduleBlink();
+    return () => clearTimeout(timerId);
+  }, [voiceStatus]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
     messagesEnd.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Init Speech Recognition
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'fr-FR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      if (transcript.trim()) {
-        sendMessage(transcript.trim());
-      }
-      setListening(false);
-    };
-
-    recognition.onerror = () => {
-      setListening(false);
-      // Restart if still in voice mode
-      setTimeout(() => {
-        if (voiceModeRef.current && !loadingRef.current) startListening();
-      }, 500);
-    };
-
-    recognition.onend = () => {
-      setListening(false);
-    };
-
-    recognitionRef.current = recognition;
-  }, []);
-
-  const startListening = useCallback(() => {
-    if (!recognitionRef.current) return;
+  const fetchApiKey = useCallback(async () => {
+    if (apiKey) return apiKey;
     try {
-      recognitionRef.current.start();
-      setListening(true);
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiUrl}/api/voice-config`);
+      const data = await res.json();
+      setApiKey(data.key);
+      return data.key;
     } catch {
-      // Already started
+      return null;
     }
-  }, []);
+  }, [apiKey]);
 
-  const speak = useCallback((text) => {
-    return new Promise((resolve) => {
-      if (!ttsEnabled || !window.speechSynthesis) { resolve(); return; }
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'fr-FR';
-      utterance.rate = 1.05;
-      utterance.pitch = 1;
-      const voices = window.speechSynthesis.getVoices();
-      const frVoice = voices.find((v) => v.lang.startsWith('fr'));
-      if (frVoice) utterance.voice = frVoice;
-      utterance.onend = resolve;
-      utterance.onerror = resolve;
-      window.speechSynthesis.speak(utterance);
-    });
-  }, [ttsEnabled]);
+  const startVoice = useCallback(async () => {
+    const key = await fetchApiKey();
+    if (!key) {
+      setVoiceStatus('error');
+      return;
+    }
+    setView('voice');
+    await geminiLiveService.connect(
+      key,
+      (status) => setVoiceStatus(status),
+      (vol) => setInputVolume(vol),
+      (vol) => setOutputVolume(vol),
+    );
+  }, [fetchApiKey]);
+
+  const stopVoice = useCallback(() => {
+    geminiLiveService.disconnect();
+    setVoiceStatus('idle');
+    setInputVolume(0);
+    setOutputVolume(0);
+    setView('text');
+  }, []);
 
   const sendMessage = useCallback(async (text) => {
-    if (!text || loadingRef.current) return;
+    if (!text || loading) return;
     setInput('');
 
     const userMsg = { role: 'user', text };
@@ -95,49 +85,25 @@ export default function Chatbot() {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
+      const history = messagesRef.current.filter((m) => m.role !== 'system').slice(-10);
       const res = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          history: [],
-        }),
+        body: JSON.stringify({ message: text, history }),
       });
 
       const data = await res.json();
       const reply = data.reply || "Contacte Quentin Lioret : quentinlioretct84@gmail.com";
       setMessages((m) => [...m, { role: 'bot', text: reply }]);
-
-      // Speak reply, then restart listening if in voice mode
-      await speak(reply);
-      if (voiceModeRef.current) {
-        setTimeout(() => startListening(), 300);
-      }
     } catch {
-      const errMsg = "Oups, probleme technique ! Contacte direct Quentin : quentinlioretct84@gmail.com";
-      setMessages((m) => [...m, { role: 'bot', text: errMsg }]);
-      if (voiceModeRef.current) {
-        await speak(errMsg);
-        setTimeout(() => startListening(), 300);
-      }
+      setMessages((m) => [
+        ...m,
+        { role: 'bot', text: "Oups, probleme technique ! Contacte direct Quentin : quentinlioretct84@gmail.com" },
+      ]);
     } finally {
       setLoading(false);
     }
-  }, [speak, startListening]);
-
-  const toggleVoiceMode = () => {
-    if (voiceMode) {
-      // Deactivate voice mode
-      setVoiceMode(false);
-      if (recognitionRef.current) recognitionRef.current.stop();
-      setListening(false);
-      window.speechSynthesis?.cancel();
-    } else {
-      // Activate voice mode
-      setVoiceMode(true);
-      startListening();
-    }
-  };
+  }, [loading]);
 
   const send = () => {
     const text = input.trim();
@@ -152,114 +118,201 @@ export default function Chatbot() {
     }
   };
 
-  const hasSpeechRecognition = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const handleClose = () => {
+    if (view === 'voice') stopVoice();
+    setOpen(false);
+  };
+
+  const mouthOpen = Math.min(1, outputVolume / 60);
+  const mouthHeight = mouthOpen * 14;
+  const eyeRy = blinking ? 1 : (outputVolume > 50 ? 11 : 9);
+  const eyebrowLift = Math.min(4, outputVolume / 25);
+
+  const statusLabel = {
+    idle: 'Pret',
+    connecting: 'Connexion...',
+    active: 'Parle-moi du camp !',
+    error: 'Micro indisponible',
+  };
 
   return (
     <>
-      {/* Trigger button */}
       <button
-        onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-orange-primary rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(249,115,22,0.4)] hover:scale-105 transition-transform"
-        style={{ animation: open ? 'none' : 'pulse 2s infinite' }}
+        onClick={() => (open ? handleClose() : setOpen(true))}
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-orange-primary rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(232,121,43,0.4)] hover:scale-105 transition-transform"
+        style={{ animation: open ? 'none' : 'chatPulse 2s infinite' }}
         aria-label="Ouvrir le chat"
       >
-        {open ? <X size={24} className="text-black-primary" /> : <MessageCircle size={24} className="text-black-primary" />}
+        {open ? <X size={24} className="text-white" /> : <MessageCircle size={24} className="text-white" />}
       </button>
 
       <style>{`
-        @keyframes pulse {
+        @keyframes chatPulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.05); }
         }
-        @keyframes glow-mic {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.5); }
-          50% { box-shadow: 0 0 0 10px rgba(249,115,22,0); }
+        @keyframes coachBob {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
         }
       `}</style>
 
-      {/* Chat window */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-[90vw] max-w-[380px] h-[500px] sm:h-[550px] bg-black-secondary border border-gray-700 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+        <div className="fixed bottom-24 right-6 z-50 w-[90vw] max-w-[380px] h-[500px] sm:h-[550px] bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
           {/* Header */}
           <div className="bg-orange-primary px-5 py-4 flex items-center gap-3 flex-shrink-0">
-            <div className="w-9 h-9 bg-black-primary rounded-full flex items-center justify-center">
-              <span className="font-bebas text-white text-lg">C</span>
+            <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center">
+              <span className="font-bebas text-orange-primary text-lg">C</span>
             </div>
             <div className="flex-1">
-              <p className="font-bold text-black-primary text-sm">COACH</p>
-              <p className="text-black-primary/70 text-xs">
-                {voiceMode ? (listening ? 'Ecoute...' : loading ? 'Repond...' : 'Mode vocal actif') : 'Summer Camp CD84'}
+              <p className="font-bold text-white text-sm">ASSISTANT CD84</p>
+              <p className="text-white/70 text-xs">
+                {view === 'voice' ? statusLabel[voiceStatus] : 'Summer Camp CD84'}
               </p>
             </div>
-            <button
-              onClick={() => { setTtsEnabled((v) => !v); window.speechSynthesis?.cancel(); }}
-              className="text-black-primary/70 hover:text-black-primary transition-colors"
-              title={ttsEnabled ? 'Desactiver la voix' : 'Activer la voix'}
-            >
-              {ttsEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-            </button>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] px-4 py-3 text-sm leading-relaxed ${
-                    m.role === 'user'
-                      ? 'bg-orange-primary text-black-primary rounded-2xl rounded-br-sm'
-                      : 'bg-black-tertiary text-gray-300 rounded-2xl rounded-bl-sm border border-gray-700'
-                  }`}
+          {view === 'text' ? (
+            <>
+              {/* Text Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {messages.map((m, i) => (
+                  <div
+                    key={i}
+                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] px-4 py-3 text-sm leading-relaxed ${
+                        m.role === 'user'
+                          ? 'bg-orange-primary text-white rounded-2xl rounded-br-sm'
+                          : 'bg-[#FAF9F7] text-gray-700 rounded-2xl rounded-bl-sm border border-gray-200'
+                      }`}
+                    >
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="bg-[#FAF9F7] text-gray-700 rounded-2xl rounded-bl-sm border border-gray-200 px-4 py-3">
+                      <Loader2 size={18} className="animate-spin text-orange-primary" />
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEnd} />
+              </div>
+
+              {/* Text Input */}
+              <div className="flex-shrink-0 border-t border-gray-200 p-3 flex gap-2">
+                <button
+                  onClick={startVoice}
+                  className="w-11 h-11 flex items-center justify-center rounded-lg bg-[#FAF9F7] border border-gray-200 text-gray-500 hover:text-orange-primary hover:border-orange-primary transition-all flex-shrink-0"
+                  title="Activer le mode vocal"
                 >
-                  {m.text}
-                </div>
+                  <Mic size={18} />
+                </button>
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={onKey}
+                  placeholder="Pose ta question..."
+                  className="flex-1 bg-[#FAF9F7] border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-lg focus:border-orange-primary focus:outline-none transition-colors placeholder:text-gray-400"
+                  disabled={loading}
+                />
+                <button
+                  onClick={send}
+                  disabled={loading}
+                  className="bg-orange-primary text-white w-11 h-11 flex items-center justify-center rounded-lg hover:bg-orange-dark transition-colors flex-shrink-0 disabled:opacity-50"
+                >
+                  <Send size={18} />
+                </button>
               </div>
-            ))}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="bg-black-tertiary text-gray-300 rounded-2xl rounded-bl-sm border border-gray-700 px-4 py-3">
-                  <Loader2 size={18} className="animate-spin text-orange-primary" />
-                </div>
-              </div>
-            )}
-            <div ref={messagesEnd} />
-          </div>
+            </>
+          ) : (
+            <>
+              {/* Voice Mode */}
+              <div className="flex-1 flex flex-col items-center justify-center p-8 gap-6">
+                {voiceStatus === 'connecting' && (
+                  <Loader2 size={48} className="animate-spin text-orange-primary" />
+                )}
 
-          {/* Input */}
-          <div className="flex-shrink-0 border-t border-gray-700 p-3 flex gap-2">
-            {hasSpeechRecognition && (
-              <button
-                onClick={toggleVoiceMode}
-                className={`w-11 h-11 flex items-center justify-center rounded-lg transition-all flex-shrink-0 ${
-                  voiceMode
-                    ? 'bg-orange-primary text-black-primary'
-                    : 'bg-black-tertiary border border-gray-700 text-gray-400 hover:text-orange-primary hover:border-orange-primary'
-                }`}
-                style={voiceMode && listening ? { animation: 'glow-mic 1.5s infinite' } : {}}
-                title={voiceMode ? 'Quitter le mode vocal' : 'Activer le mode vocal'}
-              >
-                <Mic size={18} />
-              </button>
-            )}
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKey}
-              placeholder={voiceMode ? (listening ? 'Je t\'ecoute...' : 'Mode vocal actif') : 'Pose ta question...'}
-              className="flex-1 bg-black-tertiary border border-gray-700 text-white text-sm px-4 py-3 rounded-lg focus:border-orange-primary focus:outline-none transition-colors placeholder:text-gray-500"
-              disabled={loading || voiceMode}
-            />
-            <button
-              onClick={send}
-              disabled={loading || voiceMode}
-              className="bg-orange-primary text-black-primary w-11 h-11 flex items-center justify-center rounded-lg hover:bg-orange-hover transition-colors flex-shrink-0 disabled:opacity-50"
-            >
-              <Send size={18} />
-            </button>
-          </div>
+                {voiceStatus === 'active' && (
+                  <>
+                    <div style={{ animation: 'coachBob 3s ease-in-out infinite' }}>
+                      <svg viewBox="0 0 180 180" width="160" height="160">
+                        <defs>
+                          <radialGradient id="ballGrad" cx="40%" cy="35%" r="60%">
+                            <stop offset="0%" stopColor="#F0A060" />
+                            <stop offset="100%" stopColor="#E8792B" />
+                          </radialGradient>
+                          <clipPath id="ballClip">
+                            <circle cx="90" cy="90" r="85" />
+                          </clipPath>
+                        </defs>
+                        <circle cx="90" cy="90" r="85" fill="url(#ballGrad)" />
+                        <g clipPath="url(#ballClip)" stroke="#C4621A" strokeWidth="2.5" fill="none" opacity="0.35">
+                          <line x1="5" y1="90" x2="175" y2="90" />
+                          <line x1="90" y1="5" x2="90" y2="175" />
+                          <path d="M 30 20 Q 90 80, 30 160" />
+                          <path d="M 150 20 Q 90 80, 150 160" />
+                        </g>
+                        {/* Eyes */}
+                        <ellipse cx="62" cy="78" rx="12" ry={eyeRy} fill="white" className="transition-all duration-100" />
+                        <ellipse cx="118" cy="78" rx="12" ry={eyeRy} fill="white" className="transition-all duration-100" />
+                        <ellipse cx="64" cy="78" rx="5" ry={Math.min(5, eyeRy)} fill="#1a1a1a" className="transition-all duration-100" />
+                        <ellipse cx="120" cy="78" rx="5" ry={Math.min(5, eyeRy)} fill="#1a1a1a" className="transition-all duration-100" />
+                        <circle cx="67" cy="74" r="2" fill="white" opacity="0.8" />
+                        <circle cx="123" cy="74" r="2" fill="white" opacity="0.8" />
+                        {/* Eyebrows */}
+                        <path d={`M 48 ${66 - eyebrowLift} Q 62 ${58 - eyebrowLift}, 76 ${66 - eyebrowLift}`} stroke="#8B4513" strokeWidth="3" fill="none" strokeLinecap="round" className="transition-all duration-100" />
+                        <path d={`M 104 ${66 - eyebrowLift} Q 118 ${58 - eyebrowLift}, 132 ${66 - eyebrowLift}`} stroke="#8B4513" strokeWidth="3" fill="none" strokeLinecap="round" className="transition-all duration-100" />
+                        {/* Mouth */}
+                        {mouthOpen < 0.05 ? (
+                          <path d="M 68 115 Q 90 128, 112 115" stroke="#8B4513" strokeWidth="3" fill="none" strokeLinecap="round" />
+                        ) : (
+                          <>
+                            <ellipse cx="90" cy="118" rx={12 + mouthOpen * 8} ry={Math.max(2, mouthHeight)} fill="#5C1A00" className="transition-all duration-75" />
+                            {mouthHeight > 6 && (
+                              <ellipse cx="90" cy={120 + mouthHeight * 0.2} rx={6 + mouthOpen * 4} ry={mouthHeight * 0.4} fill="#3D0E00" className="transition-all duration-75" />
+                            )}
+                          </>
+                        )}
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 text-sm text-center">
+                      Je t'ecoute...
+                    </p>
+                  </>
+                )}
+
+                {voiceStatus === 'error' && (
+                  <div className="text-center">
+                    <MicOff size={48} className="text-red-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-sm">
+                      Micro indisponible. Verifie les permissions de ton navigateur.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Voice Controls */}
+              <div className="flex-shrink-0 border-t border-gray-200 p-4 flex flex-col items-center gap-3">
+                <button
+                  onClick={stopVoice}
+                  className="w-full bg-red-500 text-white font-bold uppercase tracking-widest py-3 text-sm rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <MicOff size={18} />
+                  Arreter la voix
+                </button>
+                <button
+                  onClick={stopVoice}
+                  className="text-gray-500 text-xs hover:text-orange-primary transition-colors"
+                >
+                  Revenir au chat texte
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </>

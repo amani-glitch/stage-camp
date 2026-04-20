@@ -34,7 +34,7 @@ export default function Pillars() {
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
   return (
-    <section className="py-24 px-6 bg-black-primary">
+    <section className="py-24 px-6 bg-white">
       <div ref={ref} className="max-w-7xl mx-auto">
         <motion.div
           className="text-center mb-16"
@@ -56,7 +56,7 @@ export default function Pillars() {
             return (
               <motion.div
                 key={p.num}
-                className="bg-black-secondary border border-gray-700 p-8 group hover:border-orange-primary transition-all duration-300 hover:-translate-y-2"
+                className="bg-[#FAF9F7] border border-gray-200 p-8 group hover:border-orange-primary transition-all duration-300 hover:-translate-y-2"
                 initial={{ opacity: 0, y: 30 }}
                 animate={inView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.6, delay: i * 0.15 }}
@@ -66,7 +66,7 @@ export default function Pillars() {
                   size={36}
                   strokeWidth={1.5}
                 />
-                <span className="text-gray-700 font-bebas text-5xl">{p.num}</span>
+                <span className="text-gray-300 font-bebas text-5xl">{p.num}</span>
                 <h3 className="font-bebas text-2xl tracking-wider mt-2 mb-4">
                   {p.title}
                 </h3>

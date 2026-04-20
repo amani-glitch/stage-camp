@@ -6,7 +6,7 @@ export default function Objectives() {
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
   return (
-    <section className="py-24 px-6 bg-black-secondary">
+    <section className="py-24 px-6 bg-[#FAF9F7]">
       <div ref={ref} className="max-w-4xl mx-auto text-center">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -20,7 +20,7 @@ export default function Objectives() {
             LA PERFORMANCE
           </h2>
           <div className="w-16 h-0.5 bg-orange-primary mx-auto mb-8" />
-          <p className="text-xl text-gray-300 mb-6 font-medium">
+          <p className="text-xl text-gray-700 mb-6 font-medium">
             Permettre a chaque participant d'aborder la saison avec un temps d'avance.
           </p>
           <p className="text-gray-500 leading-relaxed max-w-3xl mx-auto">

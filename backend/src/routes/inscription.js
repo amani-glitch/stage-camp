@@ -6,25 +6,43 @@ import { notifyViaAppsScript } from '../services/email.js';
 
 const router = Router();
 
+const inscriptionRateLimit = new Map();
+
+function rateLimit(req, res, next) {
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const windowMs = 300000;
+  const requests = (inscriptionRateLimit.get(ip) || []).filter((t) => now - t < windowMs);
+  if (requests.length >= 3) {
+    return res.status(429).json({ message: 'Trop de tentatives. Reessayez dans quelques minutes.' });
+  }
+  requests.push(now);
+  inscriptionRateLimit.set(ip, requests);
+  next();
+}
+
 const validate = [
-  body('playerLastName').trim().notEmpty(),
-  body('playerFirstName').trim().notEmpty(),
-  body('birthDate').trim().notEmpty(),
-  body('category').trim().notEmpty(),
-  body('club').trim().notEmpty(),
-  body('level').trim().notEmpty(),
-  body('parentLastName').trim().notEmpty(),
-  body('parentFirstName').trim().notEmpty(),
-  body('email').isEmail(),
-  body('phone').trim().notEmpty(),
-  body('address').trim().notEmpty(),
-  body('postalCode').trim().notEmpty(),
-  body('city').trim().notEmpty(),
+  body('playerLastName').trim().notEmpty().isLength({ max: 100 }),
+  body('playerFirstName').trim().notEmpty().isLength({ max: 100 }),
+  body('birthDate').trim().notEmpty().isISO8601(),
+  body('category').trim().notEmpty().isIn(['U11', 'U12', 'U13', 'U15']),
+  body('club').trim().notEmpty().isLength({ max: 200 }),
+  body('level').trim().notEmpty().isIn(['Selection departementale', 'Niveau regional', 'Autre']),
+  body('parentLastName').trim().notEmpty().isLength({ max: 100 }),
+  body('parentFirstName').trim().notEmpty().isLength({ max: 100 }),
+  body('email').isEmail().normalizeEmail(),
+  body('phone').trim().notEmpty().isLength({ max: 20 }).matches(/^[\d\s+()-]+$/),
+  body('address').trim().notEmpty().isLength({ max: 300 }),
+  body('postalCode').trim().notEmpty().isLength({ max: 10 }).matches(/^[\d\s]+$/),
+  body('city').trim().notEmpty().isLength({ max: 100 }),
+  body('allergies').optional().trim().isLength({ max: 1000 }),
+  body('medical').optional().trim().isLength({ max: 1000 }),
+  body('source').optional().trim().isLength({ max: 200 }),
   body('acceptParticipation').equals('true'),
   body('acceptConditions').equals('true'),
 ];
 
-router.post('/inscription', validate, async (req, res) => {
+router.post('/inscription', rateLimit, validate, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ message: 'Champs obligatoires manquants', errors: errors.array() });
@@ -46,7 +64,6 @@ router.post('/inscription', validate, async (req, res) => {
 
     await appendRow(row);
 
-    // Send emails via Apps Script (non-blocking)
     notifyViaAppsScript(d).catch(console.error);
 
     res.status(201).json({ id, message: 'Inscription enregistree' });

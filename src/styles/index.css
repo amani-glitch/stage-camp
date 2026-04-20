@@ -3,16 +3,16 @@
 @tailwind utilities;
 
 :root {
-  --black-primary: #0A0A0A;
-  --black-secondary: #141414;
-  --black-tertiary: #1F1F1F;
-  --orange-primary: #F97316;
-  --orange-hover: #FB923C;
-  --orange-dark: #EA580C;
+  --black-primary: #0D0D0D;
+  --black-secondary: #171717;
+  --black-tertiary: #222222;
+  --orange-primary: #E8792B;
+  --orange-hover: #F0A060;
+  --orange-dark: #D4691F;
   --white: #FFFFFF;
   --gray-100: #F5F5F5;
   --gray-300: #D4D4D4;
-  --gray-500: #737373;
+  --gray-500: #8C8279;
   --gray-700: #404040;
 }
 
@@ -27,8 +27,8 @@ html {
 }
 
 body {
-  background-color: var(--black-primary);
-  color: var(--white);
+  background-color: var(--white);
+  color: var(--black-primary);
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
 }
@@ -38,26 +38,31 @@ body {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--black-primary);
+  background: var(--white);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--gray-700);
+  background: var(--gray-300);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--orange-primary);
 }
 
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: #0D0D0D;
+}
+
 /* Selection */
 ::selection {
   background: var(--orange-primary);
-  color: var(--black-primary);
+  color: var(--white);
 }
 
 /* Animations */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(249, 115, 22, 0.6); }
+  0%, 100% { box-shadow: 0 0 20px rgba(232, 121, 43, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(232, 121, 43, 0.6); }
 }
 
 @keyframes float {

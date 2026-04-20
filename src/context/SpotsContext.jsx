@@ -7,7 +7,7 @@ export function SpotsProvider({ children }) {
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL || '';
-    fetch(`${apiUrl}/api/stats`)
+    fetch(`${apiUrl}/api/spots`)
       .then((r) => r.json())
       .then((d) => setRemaining(d.remaining))
       .catch(() => {});

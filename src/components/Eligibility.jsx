@@ -13,7 +13,7 @@ export default function Eligibility() {
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
   return (
-    <section className="py-24 px-6 bg-black-secondary">
+    <section className="py-24 px-6 bg-[#FAF9F7]">
       <div ref={ref} className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -37,7 +37,7 @@ export default function Eligibility() {
                 transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
               >
                 <Check className="text-orange-primary mt-1 flex-shrink-0" size={22} />
-                <p className="text-gray-300 text-lg">{c}</p>
+                <p className="text-gray-700 text-lg">{c}</p>
               </motion.div>
             ))}
           </div>
@@ -49,7 +49,7 @@ export default function Eligibility() {
             transition={{ duration: 0.6, delay: 0.6 }}
           >
             <AlertTriangle className="text-orange-primary mt-0.5 flex-shrink-0" size={22} />
-            <p className="text-orange-hover font-medium">
+            <p className="text-orange-dark font-medium">
               Ce n'est pas un stage decouverte. Niveau minimum requis.
             </p>
           </motion.div>
@@ -60,14 +60,14 @@ export default function Eligibility() {
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.8 }}
           >
-            <p className="font-bebas text-2xl tracking-wider mb-6">
+            <p className="font-bebas text-2xl tracking-wider mb-6 text-gray-900">
               Tu as le niveau ? Rejoins l'elite.
             </p>
             <button
               onClick={() =>
                 document.getElementById('inscription')?.scrollIntoView({ behavior: 'smooth' })
               }
-              className="bg-orange-primary text-black-primary font-bold uppercase tracking-widest px-8 py-4 text-sm hover:bg-white transition-all duration-300 hover:-translate-y-0.5"
+              className="bg-orange-primary text-white font-bold uppercase tracking-widest px-8 py-4 text-sm hover:bg-orange-dark transition-all duration-300 hover:-translate-y-0.5"
             >
               Verifier mon eligibilite
             </button>

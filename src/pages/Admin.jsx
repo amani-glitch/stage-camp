@@ -1,22 +1,37 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Lock, LogOut, Users, UserCheck, Calendar, BarChart3, Download, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-const COLORS = ['#F97316', '#FB923C', '#EA580C', '#FDBA74', '#FED7AA'];
+const COLORS = ['#E8792B', '#F0A060', '#D4691F', '#FDBA74', '#FED7AA'];
 
 function LoginScreen({ onLogin }) {
   const [pw, setPw] = useState('');
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    const expected = import.meta.env.VITE_ADMIN_PASSWORD || 'admin2026';
-    if (pw === expected) {
-      onLogin();
-    } else {
+    setLoading(true);
+    setError(false);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiUrl}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onLogin(data.token);
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 2000);
+      }
+    } catch {
       setError(true);
       setTimeout(() => setError(false), 2000);
     }
+    setLoading(false);
   };
 
   return (
@@ -34,8 +49,11 @@ function LoginScreen({ onLogin }) {
           className="w-full bg-black-tertiary border border-gray-700 text-white px-4 py-3 mb-4 focus:border-orange-primary focus:outline-none"
         />
         {error && <p className="text-red-500 text-sm mb-4">Mot de passe incorrect</p>}
-        <button className="w-full bg-orange-primary text-black-primary font-bold uppercase tracking-widest py-3 text-sm hover:bg-white transition-all">
-          Connexion
+        <button
+          disabled={loading}
+          className="w-full bg-orange-primary text-black-primary font-bold uppercase tracking-widest py-3 text-sm hover:bg-white transition-all disabled:opacity-50"
+        >
+          {loading ? 'Connexion...' : 'Connexion'}
         </button>
       </form>
     </div>
@@ -77,7 +95,7 @@ function DetailModal({ row, onClose }) {
 }
 
 export default function Admin() {
-  const [authed, setAuthed] = useState(false);
+  const [token, setToken] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('');
@@ -88,22 +106,33 @@ export default function Admin() {
 
   const apiUrl = import.meta.env.VITE_API_URL || '';
 
-  const fetchData = async () => {
+  const authHeaders = useCallback(() => ({
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  }), [token]);
+
+  const fetchData = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     try {
       const res = await fetch(`${apiUrl}/api/inscriptions`, {
-        headers: { 'x-admin-key': import.meta.env.VITE_ADMIN_PASSWORD || 'admin2026' },
+        headers: authHeaders(),
       });
-      if (res.ok) setData(await res.json());
-    } catch { /* ignore */ }
+      if (res.ok) {
+        setData(await res.json());
+      } else if (res.status === 401) {
+        setToken(null);
+      }
+    } catch {
+      console.warn('Failed to fetch inscriptions');
+    }
     setLoading(false);
-  };
+  }, [token, apiUrl, authHeaders]);
 
   useEffect(() => {
-    if (authed) fetchData();
-  }, [authed]);
+    if (token) fetchData();
+  }, [token, fetchData]);
 
-  // Normalize keys from Google Sheets headers to what the dashboard expects
   const normalized = useMemo(() => {
     return data.map((d) => ({
       id: d.ID || d.id || '',
@@ -167,13 +196,12 @@ export default function Admin() {
     try {
       await fetch(`${apiUrl}/api/inscriptions/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-key': import.meta.env.VITE_ADMIN_PASSWORD || 'admin2026',
-        },
+        headers: authHeaders(),
         body: JSON.stringify({ statut }),
       });
-    } catch { /* ignore */ }
+    } catch {
+      console.warn('Failed to update status');
+    }
     setData((prev) => prev.map((d) => (d.ID === id || d.id === id ? { ...d, Statut: statut, statut } : d)));
   };
 
@@ -190,7 +218,7 @@ export default function Admin() {
     URL.revokeObjectURL(url);
   };
 
-  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
+  if (!token) return <LoginScreen onLogin={(t) => setToken(t)} />;
 
   return (
     <div className="min-h-screen bg-black-primary text-white">
@@ -201,7 +229,7 @@ export default function Admin() {
           <span className="font-bebas text-2xl tracking-wider text-orange-primary">84</span>
           <span className="text-gray-500 text-sm ml-4">Admin Dashboard</span>
         </div>
-        <button onClick={() => setAuthed(false)} className="text-gray-500 hover:text-white transition-colors flex items-center gap-2 text-sm">
+        <button onClick={() => setToken(null)} className="text-gray-500 hover:text-white transition-colors flex items-center gap-2 text-sm">
           <LogOut size={16} /> Deconnexion
         </button>
       </div>
@@ -234,10 +262,10 @@ export default function Admin() {
             <h3 className="font-bebas text-lg tracking-wider mb-4">Par statut</h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={statusCounts}>
-                <XAxis dataKey="name" stroke="#737373" fontSize={12} />
-                <YAxis stroke="#737373" fontSize={12} />
+                <XAxis dataKey="name" stroke="#8C8279" fontSize={12} />
+                <YAxis stroke="#8C8279" fontSize={12} />
                 <Tooltip />
-                <Bar dataKey="value" fill="#F97316" />
+                <Bar dataKey="value" fill="#E8792B" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -300,7 +328,7 @@ export default function Admin() {
                     </select>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => setDetail(row)} className="text-gray-500 hover:text-orange-primary transition-colors">
+                    <button onClick={() => setDetail(row)} className="text-gray-500 hover:text-orange-primary transition-colors" aria-label="Voir le detail">
                       <Eye size={16} />
                     </button>
                   </td>
@@ -324,6 +352,7 @@ export default function Admin() {
               onClick={() => setPage(Math.max(0, page - 1))}
               disabled={page === 0}
               className="text-gray-500 hover:text-white disabled:opacity-30 transition-colors"
+              aria-label="Page precedente"
             >
               <ChevronLeft size={20} />
             </button>
@@ -334,6 +363,7 @@ export default function Admin() {
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
               className="text-gray-500 hover:text-white disabled:opacity-30 transition-colors"
+              aria-label="Page suivante"
             >
               <ChevronRight size={20} />
             </button>
@@ -344,25 +374,4 @@ export default function Admin() {
       <DetailModal row={detail} onClose={() => setDetail(null)} />
     </div>
   );
-}
-
-function demoData() {
-  const cats = ['U11', 'U12', 'U13', 'U15'];
-  const clubs = ['Avignon Basket', 'Carpentras BC', 'Orange BC', 'Cavaillon Basket', 'Apt Basket', 'Pertuis BC'];
-  const statuts = ['en_attente', 'confirme', 'en_attente', 'confirme', 'en_attente'];
-  const prenoms = ['Lucas', 'Emma', 'Noah', 'Lea', 'Hugo', 'Chloe', 'Louis', 'Manon', 'Jules', 'Camille', 'Adam', 'Jade'];
-  const noms = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent'];
-
-  return Array.from({ length: 12 }, (_, i) => ({
-    id: `SC-${String(i + 1).padStart(3, '0')}`,
-    date_inscription: new Date(Date.now() - Math.random() * 30 * 86400000).toISOString().slice(0, 10),
-    nom: noms[i % noms.length],
-    prenom: prenoms[i % prenoms.length],
-    categorie: cats[i % cats.length],
-    club: clubs[i % clubs.length],
-    niveau: i % 2 === 0 ? 'Selection departementale' : 'Niveau regional',
-    email: `parent${i + 1}@email.com`,
-    telephone: `06 ${String(Math.random()).slice(2, 10)}`,
-    statut: statuts[i % statuts.length],
-  }));
 }
